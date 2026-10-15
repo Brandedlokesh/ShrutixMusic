@@ -12,11 +12,13 @@ from pyrogram.types import (
     Message,
 )
 
-from ShrutixMusic import app
+from ShrutixMusic import nand as app
 from config import BOT_TOKEN, OWNER_ID
 
 
 LOGGER = logging.getLogger(__name__)
+# Silence logs from this plugin only; other bot logs are unaffected.
+LOGGER.disabled = True
 
 
 # =========================================================
@@ -127,15 +129,26 @@ async def approve_join_request(chat_id: int, user_id: int) -> bool:
     Approve a pending join request through Telegram Bot API.
     """
 
-    result = await bot_api(
-        "approveChatJoinRequest",
-        {
-            "chat_id": int(chat_id),
-            "user_id": int(user_id),
-        },
-    )
+    try:
+        result = await bot_api(
+            "approveChatJoinRequest",
+            {
+                "chat_id": int(chat_id),
+                "user_id": int(user_id),
+            },
+        )
+        return bool(result.get("ok"))
+    except RuntimeError as exc:
+        # Telegram returns this when another admin already approved the
+        # request or the requester joined before pressing Start.
+        if "USER_ALREADY_PARTICIPANT" in str(exc).upper():
+            LOGGER.info(
+                "Join request already satisfied | user=%s chat=%s",
+                user_id, chat_id,
+            )
+            return True
+        raise
 
-    return bool(result.get("ok"))
 
 
 # =========================================================
@@ -545,7 +558,7 @@ async def join_start_handler(
                         "✅ <b>Unblocked & Approved!</b>\n\n"
                         f"Your join request for "
                         f"<b>{safe_text(chat_title)}</b> "
-                        f"has been approved successfully. 🎉"
+                        f"is complete. You are already approved or have joined. 🎉"
                         "</blockquote>"
                     )
 
@@ -695,7 +708,7 @@ async def join_start_handler(
                     "✅ <b>Verification Successful!</b>\n\n"
                     f"Your join request for "
                     f"<b>{safe_text(chat_title)}</b> "
-                    "has been approved successfully. 🎉\n\n"
+                    "is complete. You are already approved or have joined. 🎉\n\n"
                     "Welcome to the group! ❤️"
                     "</blockquote>"
                 )
