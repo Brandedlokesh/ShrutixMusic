@@ -39,6 +39,9 @@ heroku()
 nand = Shruti()
 userbot = Userbot()
 
+# Compatibility alias for plugins
+app = nand
+
 
 from .platforms import *
 
